@@ -56,7 +56,6 @@
 
     <h1>📁 文件上传与下载</h1>
 
-    <!-- 文件上传表单 -->
     <form id="uploadForm">
         <div class="file-input">
             <label for="fileInput">选择文件：</label>
@@ -67,23 +66,20 @@
 
     <div id="uploadMessage"></div>
 
-    <!-- 已上传文件列表 -->
     <h2>📋 已上传的文件</h2>
 
-    <!-- 动态加载文件列表（通过 API 获取） -->
     <div id="fileList">
         <p><em>加载中...</em></p>
     </div>
 
     <script>
-        // ======================
-        // 1. 文件上传功能（调用你的 POST /api/file/upload API）
-        // ======================
+        //上传文件
         document.getElementById('uploadForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
+            const token = localStorage.getItem('authToken');
 
             if (!file) {
                 alert('请选择一个文件');
@@ -99,72 +95,130 @@
             try {
                 const response = await fetch('https://localhost:7178/api/file/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
 
-                const result = await response.json(); // 假设你的 API 返回 JSON，比如 { id: 1, fileName: 'xxx' }
+                const result = await response.json();
 
                 if (response.ok) {
                     messageDiv.innerHTML = `
                         <p class="success">
-                            ✅ 上传成功！<br/>
+                            上传成功！<br/>
                             文件名：${result.fileName || file.name}<br/>
-                            文件 ID：${result.id || '未知'}<br/>
-                            <a href="https://localhost:7178/api/file/download/${result.id || 1}" target="_blank">
-                                📥 点击下载文件
-                            </a>
-                        </p>
-                    `;
+                            文件大小：${(result.fileSize / 1024).toFixed(2) || '未知'}KB<br/>
+                        </p>`;
                     loadFileList(); // 重新加载文件列表
                 } else {
                     const errorText = await response.text();
-                    messageDiv.innerHTML = `<p class="error">❌ 上传失败：${errorText}</p>`;
+                    messageDiv.innerHTML = `<p class="error">上传失败：${errorText}</p>`;
                 }
             } catch (err) {
-                messageDiv.innerHTML = `<p class="error">❌ 网络错误：${err.message}</p>`;
+                messageDiv.innerHTML = `<p class="error">网络错误：${err.message}</p>`;
             }
         });
-
-        // ======================
-        // 2. 加载已上传文件列表（调用你的 API 获取文件列表，需你实现 GET /api/file/list）
-        // 目前你只有单个下载接口，所以这里先模拟，或者你可以新增一个 API 返回所有文件
-        // ======================
 
         async function loadFileList() {
             const fileListDiv = document.getElementById('fileList');
             fileListDiv.innerHTML = '<p><em>加载文件列表中...</em></p>';
 
             try {
-                // ❗注意：你目前提供的 API 中没有 “获取所有文件列表” 的接口
-                // 所以此处只是一个示例模板，你需要后续新增一个 API 如 GET /api/file/list
-                /*
+                            
                 const response = await fetch('https://localhost:7178/api/file/list');
                 const files = await response.json();
-                let html = '<table><tr><th>ID</th><th>文件名</th><th>大小</th><th>上传时间</th><th>操作</th></tr>';
+                let html = '<table><tr><th>ID</th><th>文件名</th><th>存储名</th><th>上传时间</th><th>文件大小</th><th>操作</th></tr>';
                 files.forEach(f => {
                     html += `<tr>
                         <td>${f.id}</td>
                         <td>${f.fileName}</td>
-                        <td>${(f.fileSize / 1024).toFixed(2)} KB</td>
+                        <td>${f.storedFileName}</td>
                         <td>${f.uploadTime}</td>
-                        <td><a href="https://localhost:7178/api/file/download/${f.id}" target="_blank">下载</a></td>
+                        <td>${(f.fileSize / 1024).toFixed(2) }KB</td>
+                        <td>
+                          <button onclick="downloadFile(${f.id})">下载</button>
+                          <button onclick="deleteFile(${f.id})">删除</button>
+                        </td>
                     </tr>`;
                 });
                 html += '</table>';
                 fileListDiv.innerHTML = html;
-                */
-
-                // 🟡 目前你没有提供“获取所有文件”的 API，所以我们暂时显示这个提示
-                fileListDiv.innerHTML = `
-                    <p><em>🔒 提示：当前未实现“获取文件列表”API，请手动使用下方示例链接下载文件。</em></p>
-                    <p><strong>示例下载链接（假设你上传了 ID 为 1 的文件）：</strong></p>
-                    <a href="https://localhost:7178/api/file/download/1" target="_blank">📥 下载文件（ID: 1）</a>
-                `;
+               
             } catch (err) {
                 fileListDiv.innerHTML = `<p class="error">❌ 加载文件列表失败：${err.message}</p>`;
             }
         }
 
+        async function downloadFile(fileId) {
+            const token = localStorage.getItem('authToken'); 
+
+            if (!token) {
+                alert('未登录或 Token 不存在');
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://localhost:7178/api/file/download/${fileId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ⬅️ 关键：带上 Token
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    alert(`下载失败: 身份信息已过期！请重新登录！`);
+                    return;
+                }
+
+                //读取文件流并触发浏览器下载
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `file-${fileId}.xlsx`
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+
+            } catch (error) {
+                console.error('下载出错:身份信息已过期！请重新登录！');
+                alert('下载失败，请重试');
+            }
+        }
+        //删除文件
+        async function deleteFile(fileId) {
+            
+            const token = localStorage.getItem('authToken');
+
+            if (!token) {
+                alert('未登录或 Token 不存在');
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://localhost:7178/api/file/delete/${fileId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    alert(`删除失败: 身份信息已过期！请重新登录！`);
+                    return;
+                }
+                loadFileList();
+                alert(`删除成功！`);
+
+            } catch (error) {
+                console.error('删除失败:身份信息已过期！请重新登录！');
+                alert('删除失败，请重试');
+            }
+        }
         // 页面加载时尝试获取文件列表
         loadFileList();
     </script>

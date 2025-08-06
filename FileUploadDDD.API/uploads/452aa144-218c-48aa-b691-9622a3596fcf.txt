@@ -1,0 +1,26 @@
+数据集成
+{
+  "pluginId": "3a1a4b08-f890-d257-e745-3070f99d192c",
+  "centerType": 1,
+  "connectionString": "192.168.250.243",
+  "subscriberTopic": "testMaxTopic",
+  "dataBaseId": "0c899ac0",
+  "targetDataBaseTable": "jhy_sample_steel",
+  "storeMessage": true,
+  "storagePath": "C//电文检化验"
+}
+{
+  "name": "检化验数据集成执行任1231231312务",
+  "nodeId": "3a1ab6e9-10d2-0443-5be1-6d977208183d",
+  "pluginId": "3a1a4b08-f890-d257-e745-3070f99d192c",
+  "executionPath": "D:\\Code\\ramon.datacenter\\src\\Extensions\\Ramon.DataCenter.Integrator\\bin\\Debug\\net8.0",
+  "command": "无",
+  "arguments": "192.168.250.247",
+  "executionFrequency": 0,
+  "frequencyUnit": "秒",
+  "startTime": "2025-07-03T18:49:53.366Z",
+  "startImmediately": true,
+  "description": "无",
+  "type": 0,
+  "timeoutSeconds": 0
+}
